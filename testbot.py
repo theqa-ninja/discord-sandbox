@@ -30,7 +30,7 @@ class MyClient(discord.Client):
             await message.channel.send('message has been purged!')
 
         elif message.content.startswith('!tdb'):
-            pdb.set_trace()
+            # pdb.set_trace()
             # await message.channel.send(f'Hello {message.author}!')
             await message.channel.send('testing stuff')
         elif message.content.startswith('!channel'):
@@ -79,11 +79,12 @@ class MyClient(discord.Client):
                     })
                     await message.channel.send("Created the admin stuff Category only visible to admins")
                 else:
-                    adminCat = [s for s in guild.categories if "admin stuff" in s.name]
+                    adminCat = [s for s in guild.categories if "admin stuff" in s.name][0]
 
-                botChan = [s for s in guild.text_channels if "botcommands" in s.name]
+                botChan = [s for s in guild.channels if "botcommands" in s.name]
                 if (botChan != []):
-                    if (botChan.category is not None):
+                    botChan = botChan[0]
+                    if (botChan.category != adminCat):
                         await botChan.delete(reason=None)
 
                 botChan = await guild.create_text_channel("botcommands", category=adminCat)
