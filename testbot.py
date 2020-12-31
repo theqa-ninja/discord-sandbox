@@ -36,14 +36,14 @@ class MyClient(discord.Client):
         elif message.content.startswith('!channel'):
             await message.channel.send(f'hey {message.channel.mention}! your channel info is {message.channel}')
         elif message.content.startswith('!create'):
-            secretMessage = True
+            if (message.channel.name != "botcommands"):
+                return
             values = message.content.split(' ')
             newChanName = values[1]
             if newChanName in [j.name for j in guild.channels]:
                 await message.channel.send(f'Sorry, {newChanName} already exists')
                 return
             # doesn't exist so let's create it
-            # pdb.set_trace()
             newChan = await guild.create_text_channel(values[1], overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
@@ -58,7 +58,6 @@ class MyClient(discord.Client):
             })
             print(f'created new voice channel {newChan}')
             await message.channel.send(f'created new voice channel {newChan.mention}')
-            # pdb.set_trace()
 
         elif message.content.startswith('!author'):
             await message.channel.send(f'hey {message.author.mention}! Your discord id is {message.author}')
@@ -68,7 +67,8 @@ class MyClient(discord.Client):
 
         elif message.content == "!setupServer":
             print(f'channel: {message.channel.name}')
-            if (message.channel.name == "botcommands"):
+            if (message.channel.name == "general"):
+                secretMessage = True
                 print('running setup')
                 print(f"channel list: {[j.name for j in guild.channels]}")
 
@@ -81,11 +81,13 @@ class MyClient(discord.Client):
                 else:
                     adminCat = [s for s in guild.categories if "admin stuff" in s.name]
 
-                botChan = message.channel
+                botChan = [s for s in guild.text_channels if "botcommands" in s.name]
 
-                if (botChan.category is None):
-                    await message.channel.delete(reason=None)
-                    botChan = await guild.create_text_channel("botcommands", category=adminCat)
+                if (botChan is not None):
+                    if (botChan.category is not None):
+                        await botChan.delete(reason=None)
+
+                botChan = await guild.create_text_channel("botcommands", category=adminCat)
 
                 import time; time.sleep(1)
                 await botChan.set_permissions(guild.default_role, read_messages=False)
