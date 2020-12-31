@@ -81,12 +81,20 @@ class MyClient(discord.Client):
                 else:
                     adminCat = [s for s in guild.categories if "admin stuff" in s.name][0]
 
-                botChan = [s for s in guild.channels if "botcommands" in s.name]
+                botChan = [s for s in guild.text_channels if "botcommands" in s.name]
+                botChanFound = False
+                # no botcommands text channel found
                 if (botChan != []):
                     botChan = botChan[0]
+                    # it's in the wrong category
                     if (botChan.category != adminCat):
                         await botChan.delete(reason=None)
-                        botChan = await guild.create_text_channel("botcommands", category=adminCat)
+                    else:
+                        # it's the real botcommands channel!
+                        botChanFound = True
+
+                if (not botChanFound):
+                    botChan = await guild.create_text_channel("botcommands", category=adminCat)
 
 
                 import time; time.sleep(1)
