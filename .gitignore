@@ -130,3 +130,4 @@ dmypy.json
 
 # My Stuff to skip
 config.json
+.vscode
