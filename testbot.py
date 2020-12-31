@@ -86,8 +86,8 @@ class MyClient(discord.Client):
                     botChan = botChan[0]
                     if (botChan.category != adminCat):
                         await botChan.delete(reason=None)
+                        botChan = await guild.create_text_channel("botcommands", category=adminCat)
 
-                botChan = await guild.create_text_channel("botcommands", category=adminCat)
 
                 import time; time.sleep(1)
                 await botChan.set_permissions(guild.default_role, read_messages=False)
