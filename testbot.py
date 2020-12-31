@@ -82,8 +82,7 @@ class MyClient(discord.Client):
                     adminCat = [s for s in guild.categories if "admin stuff" in s.name]
 
                 botChan = [s for s in guild.text_channels if "botcommands" in s.name]
-
-                if (botChan is not None):
+                if (botChan != []):
                     if (botChan.category is not None):
                         await botChan.delete(reason=None)
 
