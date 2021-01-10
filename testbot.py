@@ -35,6 +35,8 @@ class MyClient(discord.Client):
             await message.channel.send('testing stuff')
         elif message.content.startswith('!channel'):
             await message.channel.send(f'hey {message.channel.mention}! your channel info is {message.channel}')
+        elif message.content.startswith('!test'):
+            await message.channel.send(f'hey {message.channel.mention}! you thought this was a test?! Good news, there\'s a curve!')
         elif message.content.startswith('!create'):
             if (message.channel.name != "botcommands"):
                 return
