@@ -24,44 +24,68 @@ class MyClient(discord.Client):
 
         guild = message.guild
         secretMessage = False
+        message_array = message.content.split(' ')
 
-        if message.content.startswith('!delete'):
+        if message_array[0] == '!delete':
             secretMessage = True
             await message.channel.send('message has been purged!')
 
-        elif message.content.startswith('!tdb'):
+        elif message_array[0] == '!tdb':
             # pdb.set_trace()
             # await message.channel.send(f'Hello {message.author}!')
             await message.channel.send('testing stuff')
-        elif message.content.startswith('!channel'):
-            await message.channel.send(f'hey {message.channel.mention}! your channel info is {message.channel}')
-        elif message.content.startswith('!test'):
-            await message.channel.send(f'hey {message.channel.mention}! you thought this was a test?! Good news, there\'s a curve!')
-        elif message.content.startswith('!create'):
+        elif message_array[0] == '!resetServer':
             if (message.channel.name != "botcommands"):
                 return
-            values = message.content.split(' ')
-            newChanName = values[1]
+            await message.channel.send(f'okay time to reset this server!')
+            # pdb.set_trace()
+            for chanId in guild.channels:
+                if chanId.name in {'general', 'setup', 'botcommands'}:
+                    continue
+                await chanId.delete()
+        elif message_array[0] == '!channel':
+            await message.channel.send(f'hey {message.channel.mention}! your channel info is {message.channel}')
+        elif message_array[0] == '!test':
+            await message.channel.send(f'hey {message.channel.mention}! you thought this was a test?! Good news, there\'s a curve!')
+        elif message_array[0] == '!assignTeam':
+            input_count = 3
+            if (message.channel.name != "botcommands"):
+                return
+            if len(message_array) > input_count:
+                await message.channel.send(f'this command needs {input_count} parameters')
+                return
+        elif message_array[0] == '!createTeam':
+            if (message.channel.name != "botcommands"):
+                return
+            input_count = 2
+            if len(message_array) != input_count:
+                await message.channel.send(f'this command needs {input_count} parameters')
+                return
+            newChanName = message_array[1]
+            # pdb.set_trace()
             if newChanName in [j.name for j in guild.channels]:
                 await message.channel.send(f'Sorry, {newChanName} already exists')
                 return
             # doesn't exist so let's create it
-            newChan = await guild.create_text_channel(values[1], overwrites={
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                guild.me: discord.PermissionOverwrite(read_messages=True),
-                message.author: discord.PermissionOverwrite(read_messages=True)
-            })
+            teamCat = [s for s in guild.categories if "team channels" in s.name][0]
+            newChan = await guild.create_text_channel(newChanName, overwrites={
+                    guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    guild.me: discord.PermissionOverwrite(read_messages=True),
+                    message.author: discord.PermissionOverwrite(read_messages=True)
+                    },
+                category=teamCat)
             print(f'created new text channel {newChan}')
             await message.channel.send(f'created new text channel {newChan.mention}')
-            newChan = await guild.create_voice_channel(values[1], overwrites={
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                guild.me: discord.PermissionOverwrite(read_messages=True),
-                message.author: discord.PermissionOverwrite(read_messages=True)
-            })
+            newChan = await guild.create_voice_channel(newChanName, overwrites={
+                    guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    guild.me: discord.PermissionOverwrite(read_messages=True),
+                    message.author: discord.PermissionOverwrite(read_messages=True)
+                    },
+                category=teamCat)
             print(f'created new voice channel {newChan}')
             await message.channel.send(f'created new voice channel {newChan.mention}')
 
-        elif message.content.startswith('!author'):
+        elif message_array[0] == '!author':
             await message.channel.send(f'hey {message.author.mention}! Your discord id is {message.author}')
 
         elif 'rickroll' in message.content:
@@ -88,20 +112,19 @@ class MyClient(discord.Client):
                 # no botcommands text channel found
                 if (botChan != []):
                     botChan = botChan[0]
+                    botChanFound = True
                     # it's in the wrong category
                     if (botChan.category != adminCat):
-                        await botChan.delete(reason=None)
-                    else:
-                        # it's the real botcommands channel!
-                        botChanFound = True
+                        # await botChan.delete(reason=None)
+                        await botChan.edit(category=adminCat)
 
                 if (not botChanFound):
                     botChan = await guild.create_text_channel("botcommands", category=adminCat)
+                    await botChan.set_permissions(guild.default_role, read_messages=False)
+                    await botChan.set_permissions(guild.me, read_messages=True, send_messages=True)
 
 
-                import time; time.sleep(1)
-                await botChan.set_permissions(guild.default_role, read_messages=False)
-                await botChan.set_permissions(guild.me, read_messages=True, send_messages=True)
+                # import time; time.sleep(1)
                 await botChan.send(f'made {botChan.mention} private')
 
                 if "announcements" not in [j.name for j in guild.text_channels]:
