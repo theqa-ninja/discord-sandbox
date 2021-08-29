@@ -2,6 +2,10 @@ import discord
 import json
 import pdb
 import os
+from discord.ext import commands
+# from discord.ext.commands import Bot
+
+# from discord import member
 
 try:
     with open('config.json', 'r') as f:
@@ -16,7 +20,7 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user.name} with id {self.user.id}')
         print('------')
-
+    @client.event
     async def on_message(self, message):
         # we do not want the bot to reply to itself
         if message.author.id == self.user.id:
@@ -54,6 +58,14 @@ class MyClient(discord.Client):
             if len(message_array) > input_count:
                 await message.channel.send(f'this command needs {input_count} parameters')
                 return
+            chans = [s for s in guild.channels if message_array[1] in s.name]
+            if len(chans) != 2:
+                await message.channel.send(f'no team {message_array[1]} found')
+                return
+            # found the team channels!
+            # check the members
+            memberId = message_array[2]
+            await guild.fetch_member()
         elif message_array[0] == '!createTeam':
             if (message.channel.name != "botcommands"):
                 return
@@ -154,7 +166,6 @@ class MyClient(discord.Client):
 
         if secretMessage:
             await message.delete(delay=None)
-
 
 client = MyClient()
 client.run(token)
