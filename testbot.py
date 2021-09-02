@@ -20,7 +20,6 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user.name} with id {self.user.id}')
         print('------')
-    @client.event
     async def on_message(self, message):
         # we do not want the bot to reply to itself
         if message.author.id == self.user.id:

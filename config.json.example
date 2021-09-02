@@ -1,3 +1,11 @@
 {
-  "bottoken": "YOUR TOKEN HERE"
+  "bottoken": "YOUR TOKEN HERE",
+  "help_channel": "help-please",
+  "announcements": "announcements",
+  "bot_spam": "botcommands",
+  "channels_to_keep": "general, setup",
+  "public_channels": "looking-for-teammate",
+  "admin_channels": "control-room",
+  "admin_role": "admin",
+  "mod_role": "gamecontrol"
 }
