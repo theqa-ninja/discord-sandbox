@@ -3,6 +3,7 @@ from logging.config import fileConfig
 import json
 import logging
 import os
+import random
 from discord.ext import commands
 
 fileConfig('logging.ini')
@@ -15,6 +16,11 @@ def isMod(author_member):
     else:
         return False
 
+# writing the ToS acceptance emoji into config.json
+# TODO: fix this because it doesn't work.
+def setEmj(emj):
+    with open('config.json', 'r') as f:
+        config = json.load(f)
 
 try:
     with open('config.json', 'r') as f:
@@ -28,17 +34,21 @@ try:
     public_chan_list = config['public_channels'].split(',')
     admin_role_name = config['admin_role']
     mod_role_name = config['mod_role']
+    user_role_name = config['user_role']
+    tos_accept_emj = config['ToS_acceptance_emoji']
     keep_chan_list = config['channels_to_keep'].split(',')
 
 except FileNotFoundError:
     token = os.environ['bottoken']
 
+# TODO: FORMAT THIS
 public_commands = {
     '!commands': 'prints this list that you\'re already viewing',
     '!addMember': '`!addMember <USERNAME>` only works in your team channel.  Needs to match exactly the name of the user or you might get someone else!',
     '!help': '`!help <message>` this sends a message to GameControl saying you would like some help on what you\'re stuck on',
 }
 
+# TODO: FORMAT THIS
 admin_commands = {
     '!ping': 'prints back `pong` so you know I\'m alive',
     '!createTeam': '`!createTeam <TEAMNAME>` creates the text & voice for the team.  If the team name has spaces in it, it will substitute it with -.  ',
@@ -83,6 +93,32 @@ async def on_message(message):
         # await message.channel.send(f'Hello {message.author}!')
         await message.reply(f':ping_pong: hey {message.author.mention}! your channel info is {message.channel.mention}')
 
+    # TODO: FINISH THIS FOR EMOJI REACT ROLES
+    # TEMP command to figure out what the emoji is
+    elif message_array[0] == '!emo':
+        emj = message_array[1]
+        await message.reply(f'{emj}')
+
+    # TODO: PT 2 OF EMOJI REACT ROLES (file i/o problem)
+    # sets up the emoji that will be used for accepting ToS
+    elif message_array[0] == '!setReactRole':
+        if (not mod_check):
+            logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
+            return
+        if (len(message_array) != 2):
+            logging.warning(f'!setReactRole called by {message.author.name} in {message.channel.name} with bad parameters')
+            return
+        elif (message.channel.name == "general"):
+            logging.warning('Setting up react emoji')
+            #secretMessage = True
+            # saving the emoji from the array into config.json
+            emj = message_array[1]
+            # temp emoji: <:hk:883204935456550953>
+            # need to figure out how to do file I/O to set "ToS_acceptance_emoji" = emj
+            # logging.warning(f'Writing emoji {emj} into config.json')
+            # setEmj(emj)
+
+    # TODO: FORMAT THIS
     # help them out and show them the commands
     elif message_array[0] == '!commands':
         temp_msg = ""
@@ -134,15 +170,22 @@ async def on_message(message):
         # get the help channel
         help_chan = [s for s in guild.channels if help_chan_name == s.name][0]
         # send message
-        # can potentially make this an embed to appear fancier
         help_msg = f'{message.author.mention} of team {message.channel.mention} requested \n> {message.content} \n{message.jump_url}'
         logging.info(help_msg)
         await bot_chan.send(help_msg)
-        await help_chan.send(help_msg)
+        # sending an embed in the help channel to make help requests more readable
+        color = random.randint(0, 0xFFFFFF)
+        embedVar = discord.Embed(title="HELP REQUESTED:", color=color)
+        embedVar.add_field(name = 'Name', value = f'{message.author.mention}', inline = False)
+        embedVar.add_field(name = 'Team', value = f'{message.channel.mention}', inline = False)
+        # help description without '!help'
+        help_desc = f'{message.content}'[5:]
+        # the help description is now hyperlinked
+        embedVar.add_field(name = 'Description', value = f'[{help_desc}]({message.jump_url})', inline = False)
+        await help_chan.send(embed = embedVar)
         # send a reply to let the user know that we're getting help for them
-        await message.reply(f'I\'ve notified GameControl that you could use some help, {message.author.name} \nIf someone from GameControl is available, they\'ll be on their way here soon!')
+        await message.reply(f'I\'ve notified GameControl that you need help, {message.author.mention}.\nIf someone from GameControl is available, they\'ll be on their way here soon!')
 
-    # TODO
     # adding new people to a team
     elif message_array[0] == '!assignTeam':
         if (not mod_check):
@@ -336,7 +379,7 @@ async def on_message(message):
         logging.info('secret message triggered, will delete the message')
         await message.delete(delay=None)
 
-
+# TODO: IMPLEMENT THIS
 @client.event
 async def on_reaction_add(reaction, user):
     print("newbie!")
@@ -344,12 +387,6 @@ async def on_reaction_add(reaction, user):
 @client.event
 async def on_raw_reaction_add(payload):
     print("raw!")
-
-# 1) when message reaction channel = ToS_channel name, do stuff
-# 2) if emoji = "ToS_accept_emoji", continue on
-# 3) give them new role of `puzzler`
-# 4) serverSetup should generate ToS_channel_name
-
 
 
 client.run(token)
