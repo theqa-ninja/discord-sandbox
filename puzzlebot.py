@@ -8,12 +8,14 @@ from discord.ext import commands
 
 fileConfig('logging.ini')
 
+
 def isMod(author_member):
     author_roles = author_member.roles
     if len([s for s in author_roles if (mod_role_name == s.name) or (admin_role_name == s.name)]) > 0:
         return True
     else:
         return False
+
 
 try:
     with open('config.json', 'r') as f:
@@ -37,12 +39,14 @@ bot_intents.members = True
 bot_intents.presences = True
 client = discord.Client(intents=bot_intents)
 
+
 @client.event
 async def on_ready():
     logging.info(f'Logged in as {client.user.name} with id {client.user.id}')
     logging.info('------')
     logging.warning('charging the capacitors')
     logging.error('Danger, I\'m alive!')
+
 
 @client.event
 async def on_message(message):
@@ -53,7 +57,7 @@ async def on_message(message):
     guild = message.guild
     secretMessage = False
     temp = [s for s in guild.channels if bot_chan_name == s.name]
-    if len(temp)>0:
+    if len(temp) > 0:
         bot_chan = temp[0]
     else:
         bot_chan = None
@@ -64,20 +68,31 @@ async def on_message(message):
     if message_array[0] == '!tdb':
         # pdb.set_trace()
         # await message.channel.send(f'Hello {message.author}!')
-        await message.channel.send(f'hey {message.author.name}! your channel info is {message.channel.mention}')
+        await message.reply(f'hey {message.author.name}! your channel info is {message.channel.mention}')
 
     # for resetting the server after i screwed it up
     elif message_array[0] == '!resetServer':
         if (message.channel.name != bot_chan_name):
+            logging.warning(f'!resetServer called in {message.channel.name}')
+            await bot_chan.send(f'!resetServer called in {message.channel.mention}')
             return
         if (not mod_check):
+            logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
+            await bot_chan.send(f'!resetServer called by {message.author.mention}, who is not a mod')
             return
-        await message.channel.send(f'okay time to reset this server!')
+        logging.warning('RESETTING SERVER')
+        await bot_chan.send('```#################RESETTING THE SERVER#################```')
+        await message.channel.send('okay time to reset this server!')
         # pdb.set_trace()
         for chanId in guild.channels:
             if chanId.name in keep_chan_list:
+                logging.info(f'KEEPING {chanId}')
+                await bot_chan.send(f'KEEPING {chanId}')
                 continue
+            logging.warning(f'DELETING {chanId}')
             await chanId.delete()
+        logging.warning('SERVER HAS BEEN RESET')
+        await bot_chan.send(f'DELETING {chanId}')
     # elif message_array[0] == '!channel':
     #     await message.channel.send(f'hey {message.author.name}! your channel info is {message.channel.mention}')
     # elif message_array[0] == '!test':
@@ -87,31 +102,43 @@ async def on_message(message):
     elif message_array[0] == '!help':
         input_count = 2
         if len(message_array) < input_count:
-            await message.reply(f'Please include some helpful description after the `!help` else GameControl doesn\'t know what to help you with')
+            logging.warning('User missing description for !help')
+            await bot_chan.send('User missing description for !help')
+            await message.reply('Please include some helpful description after the `!help` else GameControl doesn\'t know what to help you with')
             return
-        newChanName = message_array[1]
         # get the help channel
         help_chan = [s for s in guild.channels if help_chan_name == s.name][0]
         # send message
-        await help_chan.send(f'{message.author.mention} of team {message.channel.mention} requested \n> {message.content} \n{message.jump_url}')
+        # can potentially make this an embed to appear fancier
+        help_msg = f'{message.author.mention} of team {message.channel.mention} requested \n> {message.content} \n{message.jump_url}'
+        logging.info(help_msg)
+        await bot_chan.send(help_msg)
+        await help_chan.send(help_msg)
         # send a reply to let the user know that we're getting help for them
-        await message.reply(f'I\'ve notified GameControl that you could use some help {message.author.name}')
+        await message.reply(f'I\'ve notified GameControl that you could use some help, {message.author.name} \nIf someone from GameControl is available, they\'ll be on their way here soon!')
 
     # TODO
     # adding new people to a team
     elif message_array[0] == '!assignTeam':
         if (not mod_check):
+            logging.warning(f'!assignTeam called by {message.author.name}, who is not a mod')
+            await bot_chan.send(f'!assignTeam called by {message.author.mention}, who is not a mod')
             return
         input_count = 3
         # if (message.channel.name != bot_chan_name):
         #     return
+        # discord names can contain spaces
         if len(message_array) < input_count:
-            await bot_chan.send(f'wrong format.  Please follow `!assignTeam <team name> <mention user>`')
+            logging.warning('Missing arguments for !assignTeam')
+            await bot_chan.send('Missing arguments for !assignTeam')
+            await message.reply('Invalid formatting. Please follow `!assignTeam <team name> <mention user>`')
             return
         # find the team channels
         chans = [s for s in guild.channels if message_array[1] == s.name]
         if len(chans) != 2:
-            await bot_chan.send(f'no team {message_array[1]} found')
+            err_msg = f'404: Team "{message_array[1]}" not found'
+            logging.warning(err_msg)
+            await bot_chan.send(err_msg)
             return
         else:
             add_user = None
@@ -122,32 +149,46 @@ async def on_message(message):
                 add_name = " ".join(message_array[2:])
                 add_user = guild.get_member_named(add_name)
                 if add_user is None:
-                    await bot_chan.send(f'no user named found from `{message.content}')
+                    err_msg = f'No user named found from `{message.content}'
+                    logging.warning(err_msg)
+                    await bot_chan.send(err_msg)
                     return
 
             for chan in chans:
+                add_msg = f'Added {add_user} to {chan.mention}'
+                logging.info(add_msg)
+                await bot_chan.send(add_msg)
                 await chan.edit(overwrites={add_user: discord.PermissionOverwrite(read_messages=True, send_messages=True)})
-                await bot_chan.send(f'added {add_user} to {chan.mention}')
-        memberId = message_array[2]
 
     # Creates new teams
     elif message_array[0] == '!createTeam':
         if (not mod_check):
+            logging.warning(f'!createTeam called by {message.author.name}, who is not a mod')
+            await bot_chan.send(f'!createTeam called by {message.author.mention}, who is not a mod')
             return
         if (message.channel.name != bot_chan_name):
+            logging.warning(f'!createTeam called outside of {bot_chan}')
+            await bot_chan.send(f'!createTeam called outside of {bot_chan}')
             return
         input_count = 2
         if len(message_array) != input_count:
-            await message.channel.send(f'this command needs {input_count} parameters')
+            logging.warning('!createTeam called with incorrect parameters')
+            await bot_chan.send('!createTeam called with incorrect parameters')
+            await message.reply(f'This command needs {input_count} parameters')
             return
         newChanName = message_array[1]
         # pdb.set_trace()
         if newChanName in [j.name for j in guild.channels]:
-            await message.channel.send(f'Sorry, {newChanName} already exists')
+            logging.warning(f'!createTeam called for existing team "{newChanName}"')
+            await bot_chan.send(f'!createTeam called for existing team "{newChanName}"')
+            await message.reply(f'Sorry, {newChanName} already exists')
             return
         # doesn't exist so let's create it
         mod_role = [s for s in guild.roles if mod_role_name == s.name][0]
         teamCat = [s for s in guild.categories if "team channels" == s.name][0]
+        add_msg = f'Created new text channel {newChanName}'
+        logging.info(add_msg)
+        await bot_chan.send(add_msg)
         newChan = await guild.create_text_channel(newChanName, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
@@ -155,8 +196,9 @@ async def on_message(message):
                 message.author: discord.PermissionOverwrite(read_messages=True)
                 },
             category=teamCat)
-        print(f'created new text channel {newChan}')
-        await message.channel.send(f'created new text channel {newChan.mention}')
+        await message.reply(f'Created new text channel {newChan.mention}')
+        logging.info(add_msg)
+        await bot_chan.send(add_msg)
         newChan = await guild.create_voice_channel(newChanName, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
@@ -164,26 +206,29 @@ async def on_message(message):
                 message.author: discord.PermissionOverwrite(read_messages=True)
                 },
             category=teamCat)
-        print(f'created new voice channel {newChan}')
-        await message.channel.send(f'created new voice channel {newChan.mention}')
+        await message.reply(f'Created new voice channel {newChan.mention}')
 
     elif message_array[0] == '!author':
-        await message.channel.send(f'hey {message.author.mention}! Your discord id is {message.author}')
+        await message.reply(f'hey {message.author.mention}! Your discord id is {message.author}')
 
     elif 'rickroll' in message.content:
-        await message.channel.send('Here ya go! https://www.youtube.com/watch?v=xn38dg0YrzY')
+        logging.info(f'{message.author} got rick rolled lmao')
+        await bot_chan.send(f'{message.author} got rick rolled lmao')
+        await message.channel.send('Here ya go! <https://www.youtube.com/watch?v=xn38dg0YrzY>')
 
     elif message_array[0] == "!setupServer":
         if (not mod_check):
+            logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
             return
         if (message.channel.name == "general"):
+            logging.warning('SETTING UP SERVER')
             secretMessage = True
-            print('running setup')
-            print(f"channel list: {[j.name for j in guild.channels]}")
+            logging.warning(f"channel list: {[j.name for j in guild.channels]}")
 
             mod_role
 
             if "admin stuff" not in [j.name for j in guild.categories]:
+                logging.info('CREATING ADMIN CATEGORY')
                 adminCat = await guild.create_category("admin stuff", overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     mod_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
@@ -191,6 +236,7 @@ async def on_message(message):
                 })
                 await message.channel.send("Created the admin stuff Category only visible to admins")
             else:
+                logging.info('ADMIN CATEGORY ALREADY EXISTS')
                 adminCat = [s for s in guild.categories if "admin stuff" == s.name][0]
 
             botChan = [s for s in guild.text_channels if bot_chan_name == s.name]
@@ -201,16 +247,20 @@ async def on_message(message):
                 botChanFound = True
                 # it's in the wrong category
                 if (botChan.category != adminCat):
+                    logging.info('MOVING BOT STUFF TO ADMIN CATEGORY')
                     await botChan.edit(category=adminCat)
+                    logging.info('CHANGING BOT STUFF TO PRIVATE')
                     await botChan.send(f'made {botChan.mention} private')
 
             if (not botChanFound):
+                logging.info('CREATING ADMIN CHANNEL: BOT STUFF CHANNEL')
                 botChan = await guild.create_text_channel(bot_chan_name, category=adminCat)
                 await botChan.set_permissions(guild.default_role, read_messages=False)
                 await botChan.set_permissions(guild.me, read_messages=True, send_messages=True)
                 await botChan.send(f'created {botChan.mention} and made private')
 
             if announce_chan_name not in [j.name for j in guild.text_channels]:
+                logging.info('CREATING ANNOUNCEMENTS CHANNEL')
                 anno = await guild.create_text_channel(announce_chan_name, overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
                     guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
@@ -219,6 +269,7 @@ async def on_message(message):
                 await botChan.send(f'Created the {anno.mention} only typable to admins')
 
             for admin_chan_name in admin_chan_list:
+                logging.info('CREATING ADMIN CHANNEL: ADMIN CHANNEL')
                 if admin_chan_name not in [j.name for j in guild.text_channels]:
                     admin_chan = await guild.create_text_channel(admin_chan_name, category=adminCat, overwrites={
                         guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -227,6 +278,7 @@ async def on_message(message):
                     await botChan.send(f'Created the {admin_chan.mention} only visible to admins')
 
             if "recent-answers" not in [j.name for j in guild.text_channels]:
+                logging.info('CREATING ADMIN CHANNEL: RECENT ANSWERS CHANNEL')
                 recentChan = await guild.create_text_channel("recent-answers", category=adminCat, overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True)
@@ -234,6 +286,7 @@ async def on_message(message):
                 await botChan.send(f'Created the {recentChan.mention} only visible to admins')
 
             if help_chan_name not in [j.name for j in guild.text_channels]:
+                logging.info('CREATING PUBLIC CHANNEL: HELP REQUEST CHANNEL')
                 helpChan = await guild.create_text_channel(help_chan_name, category=adminCat, overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True)
@@ -242,10 +295,12 @@ async def on_message(message):
 
             for public_chan_name in public_chan_list:
                 if public_chan_name not in [j.name for j in guild.text_channels]:
+                    logging.info(f'CREATING PUBLIC CHANNEL: {public_chan_name}')
                     public_chan = await guild.create_text_channel(public_chan_name)
                     await botChan.send(f'Created the {public_chan.mention} visible to all')
 
             if "team channels" not in [j.name for j in guild.categories]:
+                logging.info('CREATING TEAM CATEGORY')
                 await guild.create_category("team channels", overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True)
@@ -253,6 +308,7 @@ async def on_message(message):
                 await botChan.send("Created the Team Channels Category only visible to admins")
 
     if secretMessage:
+        logging.info('secret message triggered, will delete the message')
         await message.delete(delay=None)
 
 
