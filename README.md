@@ -6,4 +6,3 @@ https://devcenter.heroku.com/articles/getting-started-with-python
 
 ### Setting up Python 3
 https://phoenixnap.com/kb/how-to-install-python-3-windows
-
