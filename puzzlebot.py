@@ -16,11 +16,6 @@ def isMod(author_member):
     else:
         return False
 
-# writing the ToS acceptance emoji into config.json
-# TODO: fix this because it doesn't work.
-def setEmj(emj):
-    with open('config.json', 'r') as f:
-        config = json.load(f)
 
 try:
     with open('config.json', 'r') as f:
@@ -35,7 +30,8 @@ try:
     admin_role_name = config['admin_role']
     mod_role_name = config['mod_role']
     user_role_name = config['user_role']
-    tos_accept_emj = config['ToS_acceptance_emoji']
+    ToS_chan_name = config['ToS_channel']
+    ToS_accept_emj = config['ToS_acceptance_emoji']
     keep_chan_list = config['channels_to_keep'].split(',')
 
 except FileNotFoundError:
@@ -60,6 +56,7 @@ admin_commands = {
 bot_intents = discord.Intents.default()
 bot_intents.members = True
 bot_intents.presences = True
+bot_intents.reactions = True
 client = discord.Client(intents=bot_intents)
 
 
@@ -93,15 +90,8 @@ async def on_message(message):
         # await message.channel.send(f'Hello {message.author}!')
         await message.reply(f':ping_pong: hey {message.author.mention}! your channel info is {message.channel.mention}')
 
-    # TODO: FINISH THIS FOR EMOJI REACT ROLES
-    # TEMP command to figure out what the emoji is
-    elif message_array[0] == '!emo':
-        emj = message_array[1]
-        await message.reply(f'{emj}')
-
-    # TODO: PT 2 OF EMOJI REACT ROLES (file i/o problem)
     # sets up the emoji that will be used for accepting ToS
-    elif message_array[0] == '!setReactRole':
+    elif message_array[0] == '!setTOSemoji':
         if (not mod_check):
             logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
             return
@@ -110,13 +100,17 @@ async def on_message(message):
             return
         elif (message.channel.name == "general"):
             logging.warning('Setting up react emoji')
-            #secretMessage = True
+            secretMessage = True
             # saving the emoji from the array into config.json
             emj = message_array[1]
-            # temp emoji: <:hk:883204935456550953>
-            # need to figure out how to do file I/O to set "ToS_acceptance_emoji" = emj
-            # logging.warning(f'Writing emoji {emj} into config.json')
-            # setEmj(emj)
+            logging.warning(f'Writing emoji {emj} into config.json')
+            # file i/o to set "ToS_acceptance_emoji" = emj
+            with open('config.json', 'r') as f:
+                config = json.load(f)
+                config['ToS_acceptance_emoji'] = f'{emj}'
+            os.remove('config.json')
+            with open('config.json', 'w') as f:
+                json.dump(config, f, indent=2)
 
     # TODO: FORMAT THIS
     # help them out and show them the commands
@@ -152,8 +146,16 @@ async def on_message(message):
                 continue
             logging.warning(f'DELETING {chanId}')
             await chanId.delete()
+        # file i/o for: config['ToS_acceptance_emoji'] = ""
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            config['ToS_acceptance_emoji'] = ""
+        os.remove('config.json')
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+        # back to logging
         logging.warning('SERVER HAS BEEN RESET')
-        await bot_chan.send(f'DELETING {chanId}')
+        await bot_chan.send('Server has been reset.')
     # elif message_array[0] == '!channel':
     #     await message.channel.send(f'hey {message.author.name}! your channel info is {message.channel.mention}')
     # elif message_array[0] == '!test':
@@ -286,14 +288,12 @@ async def on_message(message):
 
     elif message_array[0] == "!setupServer":
         if (not mod_check):
-            logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
+            logging.warning(f'!setupServer called by {message.author.name}, who is not a mod')
             return
         if (message.channel.name == "general"):
             logging.warning('SETTING UP SERVER')
             secretMessage = True
             logging.warning(f"channel list: {[j.name for j in guild.channels]}")
-
-            mod_role
 
             if "admin stuff" not in [j.name for j in guild.categories]:
                 logging.info('CREATING ADMIN CATEGORY')
@@ -331,10 +331,19 @@ async def on_message(message):
                 logging.info('CREATING ANNOUNCEMENTS CHANNEL')
                 anno = await guild.create_text_channel(announce_chan_name, overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
-                    guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
                 })
                 await botChan.send(f'Created the {anno.mention} only typable to admins')
+
+            # add_reactions must be false; it prevents users from adding new reactions in the ToS channel.
+            # it still allows users to react with the existing reaction.
+            if ToS_chan_name not in [j.name for j in guild.text_channels]:
+                logging.info('CREATING ToS CHANNEL')
+                tos = await guild.create_text_channel(ToS_chan_name, overwrites={
+                    guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False, add_reactions=False),
+                    guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+                })
+                await botChan.send(f'Created the {tos.mention} only typable to admins')
 
             for admin_chan_name in admin_chan_list:
                 logging.info('CREATING ADMIN CHANNEL: ADMIN CHANNEL')
@@ -379,14 +388,28 @@ async def on_message(message):
         logging.info('secret message triggered, will delete the message')
         await message.delete(delay=None)
 
+
 # TODO: IMPLEMENT THIS
 @client.event
-async def on_reaction_add(reaction, user):
-    print("newbie!")
-
-@client.event
 async def on_raw_reaction_add(payload):
-    print("raw!")
+    # finding the server that the reaction came from
+    guild = payload.member.guild
+    # finding the channel that the reaction came from
+    if ToS_chan_name == client.get_channel(payload.channel_id).name:
+        # verifying reaction
+        if payload.emoji.name == ToS_accept_emj:
+            # checking if role exists
+            role_list = [s for s in guild.roles if user_role_name == s.name]
+            if (len(role_list > 0)):
+                role = role_list[0]
+                # adding basic user role
+                await client.get_member(payload.user_id).add_roles(role)
+                # retrieving the msg
+                msg = client.get_message(payload.message_id)
+                # removing reactions to the message
+                await msg.clear_reaction(ToS_accept_emj)
+                # adding back a reaction
+                await msg.add_reaction(ToS_accept_emj)
 
 
 client.run(token)
