@@ -94,7 +94,7 @@ async def on_message(message):
             for key in admin_commands:
                 temp_msg += f'\n{key}: {admin_commands[key]}'
             await message.channel.send(f'===========\nSecret Mod-only Commands\n==========={temp_msg}')
-            
+
     # for resetting the server after i screwed it up
     elif message_array[0] == '!resetServer':
         if (message.channel.name != bot_chan_name):
@@ -339,7 +339,17 @@ async def on_message(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-    print("hello!")
+    print("newbie!")
+
+@client.event
+async def on_raw_reaction_add(payload):
+    print("raw!")
+
+# 1) when message reaction channel = ToS_channel name, do stuff
+# 2) if emoji = "ToS_accept_emoji", continue on
+# 3) give them new role of `puzzler`
+# 4) serverSetup should generate ToS_channel_name
+
 
 
 client.run(token)

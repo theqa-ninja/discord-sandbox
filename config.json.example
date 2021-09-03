@@ -7,5 +7,7 @@
   "public_channels": "looking-for-teammate",
   "admin_channels": "control-room",
   "admin_role": "admin",
-  "mod_role": "gamecontrol"
+  "mod_role": "gamecontrol",
+  "ToS_channel": "please-accept-terms",
+  "ToS_acceptance_emoji": ""
 }
