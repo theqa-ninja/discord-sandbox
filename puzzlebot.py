@@ -1,8 +1,12 @@
 import discord
 import json
+import logging
+from logging.config import fileConfig
 import pdb
 import os
 from discord.ext import commands
+
+fileConfig('logging.ini')
 
 def isMod(author_member):
     author_roles = author_member.roles
@@ -35,8 +39,10 @@ client = discord.Client(intents=bot_intents)
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user.name} with id {client.user.id}')
-    print('------')
+    logging.info(f'Logged in as {client.user.name} with id {client.user.id}')
+    logging.info('------')
+    logging.warn('charging the capacitors')
+    logging.error('Danger, I\'m alive!')
 
 @client.event
 async def on_message(message):
