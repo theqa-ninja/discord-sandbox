@@ -1,8 +1,7 @@
 import discord
+from logging.config import fileConfig
 import json
 import logging
-from logging.config import fileConfig
-import pdb
 import os
 from discord.ext import commands
 
@@ -33,6 +32,20 @@ try:
 
 except FileNotFoundError:
     token = os.environ['bottoken']
+
+public_commands = {
+    '!commands': 'prints this list that you\'re already viewing',
+    '!addMember': '`!addMember <USERNAME>` only works in your team channel.  Needs to match exactly the name of the user or you might get someone else!',
+    '!help': '`!help <message>` this sends a message to GameControl saying you would like some help on what you\'re stuck on',
+}
+
+admin_commands = {
+    '!ping': 'prints back `pong` so you know I\'m alive',
+    '!createTeam': '`!createTeam <TEAMNAME>` creates the text & voice for the team.  If the team name has spaces in it, it will substitute it with -.  ',
+    '!assignTeam': '`!assignTeam <team name> <mention user or user name>` this will add a person to the team listed.',
+    '!setupServer': 'this command posted in #general will generate the structure for the server',
+    '!resetServer': f'this command posted in #{bot_chan_name} will delete everything from the server except the channels it will keep',
+}
 
 bot_intents = discord.Intents.default()
 bot_intents.members = True
@@ -65,11 +78,23 @@ async def on_message(message):
     mod_role = [s for s in guild.roles if mod_role_name == s.name][0]
     message_array = message.content.strip().split(' ')
 
-    if message_array[0] == '!tdb':
+    if message_array[0] == '!ping':
         # pdb.set_trace()
         # await message.channel.send(f'Hello {message.author}!')
-        await message.reply(f'hey {message.author.name}! your channel info is {message.channel.mention}')
+        await message.reply(f':ping_pong: hey {message.author.mention}! your channel info is {message.channel.mention}')
 
+    # help them out and show them the commands
+    elif message_array[0] == '!commands':
+        temp_msg = ""
+        for key in public_commands:
+            temp_msg += f'\n{key}: {public_commands[key]}'
+        await message.channel.send(f'Here\'s a list of the commands you can run{temp_msg}')
+        if mod_check:
+            temp_msg = ""
+            for key in admin_commands:
+                temp_msg += f'\n{key}: {admin_commands[key]}'
+            await message.channel.send(f'===========\nSecret Mod-only Commands\n==========={temp_msg}')
+            
     # for resetting the server after i screwed it up
     elif message_array[0] == '!resetServer':
         if (message.channel.name != bot_chan_name):
@@ -171,12 +196,12 @@ async def on_message(message):
             await bot_chan.send(f'!createTeam called outside of {bot_chan}')
             return
         input_count = 2
-        if len(message_array) != input_count:
+        if len(message_array) < input_count:
             logging.warning('!createTeam called with incorrect parameters')
             await bot_chan.send('!createTeam called with incorrect parameters')
             await message.reply(f'This command needs {input_count} parameters')
             return
-        newChanName = message_array[1]
+        newChanName = ' '.join(message_array[1:])
         # pdb.set_trace()
         if newChanName in [j.name for j in guild.channels]:
             logging.warning(f'!createTeam called for existing team "{newChanName}"')
