@@ -41,7 +41,7 @@ client = discord.Client(intents=bot_intents)
 async def on_ready():
     logging.info(f'Logged in as {client.user.name} with id {client.user.id}')
     logging.info('------')
-    logging.warn('charging the capacitors')
+    logging.warning('charging the capacitors')
     logging.error('Danger, I\'m alive!')
 
 @client.event
