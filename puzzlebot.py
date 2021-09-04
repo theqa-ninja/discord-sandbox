@@ -3,7 +3,7 @@ from logging.config import fileConfig
 import json
 import logging
 import os
-import random
+import hashlib
 from discord.ext import commands
 
 fileConfig('logging.ini')
@@ -91,26 +91,27 @@ async def on_message(message):
         await message.reply(f':ping_pong: hey {message.author.mention}! your channel info is {message.channel.mention}')
 
     # sets up the emoji that will be used for accepting ToS
-    elif message_array[0] == '!setTOSemoji':
-        if (not mod_check):
-            logging.warning(f'!resetServer called by {message.author.name}, who is not a mod')
-            return
-        if (len(message_array) != 2):
-            logging.warning(f'!setReactRole called by {message.author.name} in {message.channel.name} with bad parameters')
-            return
-        elif (message.channel.name == "general"):
-            logging.warning('Setting up react emoji')
-            secretMessage = True
-            # saving the emoji from the array into config.json
-            emj = message_array[1]
-            logging.warning(f'Writing emoji {emj} into config.json')
-            # file i/o to set "ToS_acceptance_emoji" = emj
-            with open('config.json', 'r') as f:
-                config = json.load(f)
-                config['ToS_acceptance_emoji'] = f'{emj}'
-            os.remove('config.json')
-            with open('config.json', 'w') as f:
-                json.dump(config, f, indent=2)
+    # useful for the bot being in multiple servers
+    # elif message_array[0] == '!setTOSemoji':
+    #     if (not mod_check):
+    #         logging.warning(f'!setTOSemoji called by {message.author.name}, who is not a mod')
+    #         return
+    #     if (len(message_array) != 2):
+    #         logging.warning(f'!setTOSemoji called by {message.author.name} in {message.channel.name} with bad parameters')
+    #         return
+    #     elif (message.channel.name == "general"):
+    #         logging.warning('Setting up react emoji')
+    #         secretMessage = True
+    #         # saving the emoji from the array into config.json
+    #         emj = message_array[1]
+    #         logging.warning(f'Writing emoji {emj} into config.json')
+    #         # file i/o to set "ToS_acceptance_emoji" = emj
+    #         with open('config.json', 'r') as f:
+    #             config = json.load(f)
+    #             config['ToS_acceptance_emoji'] = f'{emj}'
+    #         os.remove('config.json')
+    #         with open('config.json', 'w') as f:
+    #             json.dump(config, f, indent=2)
 
     # TODO: FORMAT THIS
     # help them out and show them the commands
@@ -147,12 +148,12 @@ async def on_message(message):
             logging.warning(f'DELETING {chanId}')
             await chanId.delete()
         # file i/o for: config['ToS_acceptance_emoji'] = ""
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-            config['ToS_acceptance_emoji'] = ""
-        os.remove('config.json')
-        with open('config.json', 'w') as f:
-            json.dump(config, f, indent=2)
+        # with open('config.json', 'r') as f:
+        #     config = json.load(f)
+        #     config['ToS_acceptance_emoji'] = ""
+        # os.remove('config.json')
+        # with open('config.json', 'w') as f:
+        #     json.dump(config, f, indent=2)
         # back to logging
         logging.warning('SERVER HAS BEEN RESET')
         await bot_chan.send('Server has been reset.')
@@ -169,6 +170,7 @@ async def on_message(message):
             await bot_chan.send('User missing description for !help')
             await message.reply('Please include some helpful description after the `!help` else GameControl doesn\'t know what to help you with')
             return
+        # TODO: need to add logic to make sure !help is only called from a team channel
         # get the help channel
         help_chan = [s for s in guild.channels if help_chan_name == s.name][0]
         # send message
@@ -176,15 +178,16 @@ async def on_message(message):
         logging.info(help_msg)
         await bot_chan.send(help_msg)
         # sending an embed in the help channel to make help requests more readable
-        color = random.randint(0, 0xFFFFFF)
+        hash = hashlib.md5(message.channel.name.encode()).hexdigest()[-6:]
+        color = int(f'0x{hash}', 0)
         embedVar = discord.Embed(title="HELP REQUESTED:", color=color)
-        embedVar.add_field(name = 'Name', value = f'{message.author.mention}', inline = False)
-        embedVar.add_field(name = 'Team', value = f'{message.channel.mention}', inline = False)
+        embedVar.add_field(name='Name', value=f'{message.author.mention}', inline=False)
+        embedVar.add_field(name='Team', value=f'{message.channel.mention}', inline=False)
         # help description without '!help'
         help_desc = f'{message.content}'[5:]
         # the help description is now hyperlinked
-        embedVar.add_field(name = 'Description', value = f'[{help_desc}]({message.jump_url})', inline = False)
-        await help_chan.send(embed = embedVar)
+        embedVar.add_field(name='Description', value=f'[{help_desc}]({message.jump_url})', inline=False)
+        await help_chan.send(embed=embedVar)
         # send a reply to let the user know that we're getting help for them
         await message.reply(f'I\'ve notified GameControl that you need help, {message.author.mention}.\nIf someone from GameControl is available, they\'ll be on their way here soon!')
 
@@ -389,27 +392,47 @@ async def on_message(message):
         await message.delete(delay=None)
 
 
-# TODO: IMPLEMENT THIS
 @client.event
 async def on_raw_reaction_add(payload):
+    # don't want the bot to act on it's react
+    if payload.member.bot:
+        return
     # finding the server that the reaction came from
     guild = payload.member.guild
+    temp = [s for s in guild.channels if bot_chan_name == s.name]
+    if len(temp) > 0:
+        bot_chan = temp[0]
+    else:
+        bot_chan = None
     # finding the channel that the reaction came from
-    if ToS_chan_name == client.get_channel(payload.channel_id).name:
+    curr_chan = client.get_channel(payload.channel_id)
+    if ToS_chan_name == curr_chan.name:
         # verifying reaction
         if payload.emoji.name == ToS_accept_emj:
             # checking if role exists
             role_list = [s for s in guild.roles if user_role_name == s.name]
-            if (len(role_list > 0)):
+            if (len(role_list) > 0):
                 role = role_list[0]
                 # adding basic user role
-                await client.get_member(payload.user_id).add_roles(role)
+                mem = guild.get_member(payload.user_id)
+                # check if the member already has the role
+                member_roles = [s for s in mem.roles if user_role_name == s.name]
+                if (len(member_roles) == 0):
+                    logging.info(f'{mem.mention} does not have {user_role_name}; adding it now')
+                    await bot_chan.send(f'{mem.mention} does not have {user_role_name}; adding it now')
+                    # adding the role since the user doesn't have it
+                    await mem.add_roles(role)
+                logging.info(f'{mem.mention} accepted the ToS.')
+                logging.info('Resetting the reactions.')
+                await bot_chan.send(f'{mem.mention} accepted the ToS.')
+                await bot_chan.send('Resetting the reactions.')
                 # retrieving the msg
-                msg = client.get_message(payload.message_id)
+                msg = await curr_chan.fetch_message(payload.message_id)
+                # fetching server emoji
+                emj = client.get_emoji(payload.emoji.id)
                 # removing reactions to the message
-                await msg.clear_reaction(ToS_accept_emj)
+                await msg.clear_reaction(emj)
                 # adding back a reaction
-                await msg.add_reaction(ToS_accept_emj)
-
+                await msg.add_reaction(emj)
 
 client.run(token)
