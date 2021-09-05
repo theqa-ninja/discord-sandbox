@@ -188,9 +188,7 @@ async def on_message(message):
         # sending an embed in the help channel to make help requests more readable
         hash = hashlib.md5(message.channel.name.encode()).hexdigest()[-6:]
         color = int(f'0x{hash}', 0)
-        embedVar = discord.Embed(title="Help Requested:", color=color)
-        embedVar.add_field(name='Name', value=f'{message.author.mention}', inline=False)
-        embedVar.add_field(name='Team', value=f'{message.channel.mention}', inline=False)
+        embedVar = discord.Embed(title="Help Requested:", description=f'{message.author.mention} from {message.channel.mention}', color=color)
         # the help description is now hyperlinked
         embedVar.add_field(name='Description', value=f'[{help_desc}]({message.jump_url})', inline=False)
         await help_chan.send(embed=embedVar)
