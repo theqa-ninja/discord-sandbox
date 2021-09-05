@@ -26,6 +26,7 @@ try:
     help_chan_name = config['help_channel']
     bot_chan_name = config['bot_spam']
     announce_chan_name = config['announcements']
+    team_category_name = config['team_category']
     admin_chan_list = config['admin_channels'].split(',')
     public_chan_list = config['public_channels'].split(',')
     mod_role_name = config['mod_role']
@@ -37,14 +38,12 @@ try:
 except FileNotFoundError:
     token = os.environ['bottoken']
 
-# TODO: FORMAT THIS
 public_commands = {
     '!commands': 'prints this list that you\'re already viewing',
     '!addMember': '`!addMember <USERNAME>` only works in your team channel.  Needs to match exactly the name of the user or you might get someone else!',
     '!help': '`!help <message>` this sends a message to GameControl saying you would like some help on what you\'re stuck on',
 }
 
-# TODO: FORMAT THIS
 admin_commands = {
     '!ping': 'prints back `pong` so you know I\'m alive',
     '!createTeam': '`!createTeam <TEAMNAME>` creates the text & voice for the team.  If the team name has spaces in it, it will substitute it with -.  ',
@@ -112,18 +111,21 @@ async def on_message(message):
     #         with open('config.json', 'w') as f:
     #             json.dump(config, f, indent=2)
 
-    # TODO: FORMAT THIS
     # help them out and show them the commands
     elif message_array[0] == '!commands':
-        temp_msg = ""
+        # green
+        green = 65280
+        red = 16711680
+        embedVar = discord.Embed(title="Bot Commands", color=green)
         for key in public_commands:
-            temp_msg += f'\n{key}: {public_commands[key]}'
-        await message.channel.send(f'Here\'s a list of the commands you can run{temp_msg}')
-        if mod_check:
-            temp_msg = ""
+            embedVar.add_field(name=key, value=public_commands[key], inline=False)
+        await message.channel.send(embed=embedVar)
+        # only sends secret commands if mod AND in admin only channel
+        if mod_check and message.channel.name in admin_chan_list:
+            embedVar = discord.Embed(title='===========\nSecret Mod-only Commands\n===========', color=red)
             for key in admin_commands:
-                temp_msg += f'\n{key}: {admin_commands[key]}'
-            await message.channel.send(f'===========\nSecret Mod-only Commands\n==========={temp_msg}')
+                embedVar.add_field(name=key, value=admin_commands[key], inline=False)
+            await message.channel.send(embed=embedVar)
 
     # for resetting the server after i screwed it up
     elif message_array[0] == '!resetServer':
@@ -165,25 +167,30 @@ async def on_message(message):
     elif message_array[0] == '!help':
         input_count = 2
         if len(message_array) < input_count:
-            logging.warning('User missing description for !help')
-            await bot_chan.send('User missing description for !help')
-            await message.reply('Please include some helpful description after the `!help` else GameControl doesn\'t know what to help you with')
+            logging.warning(f'{message.author.name} missing description for !help')
+            await bot_chan.send(f'{message.author.mention} missing description for !help')
+            await message.reply('Please include a helpful description after `!help`, or GameControl won\'t know how to help!')
             return
-        # TODO: need to add logic to make sure !help is only called from a team channel
+        # ensures the !help request comes from a team channel
+        if message.channel.category.name != team_category_name:
+            logging.warning(f'{message.author.name} called for !help outside of their team channel, in {message.channel.name}')
+            await bot_chan.send(f'{message.author.mention} called for !help outside of their team channel, in {message.channel.mention}')
+            await message.reply('Please use the command again inside your team\'s channel.')
+            return
         # get the help channel
         help_chan = [s for s in guild.channels if help_chan_name == s.name][0]
+        # help description without '!help'
+        help_desc = f'{message.content}'[6:]
         # send message
-        help_msg = f'{message.author.mention} of team {message.channel.mention} requested \n> {message.content} \n{message.jump_url}'
-        logging.info(help_msg)
-        await bot_chan.send(help_msg)
+        logging.info(f'{message.author.mention} of team {message.channel.mention} requested help:\n{message.jump_url}\nDescription: {help_desc}')
+        await bot_chan.send(f'{message.author.mention} of team {message.channel.mention} requested help:\n<{message.jump_url}>')
+        await bot_chan.send(f'> {help_desc}')
         # sending an embed in the help channel to make help requests more readable
         hash = hashlib.md5(message.channel.name.encode()).hexdigest()[-6:]
         color = int(f'0x{hash}', 0)
         embedVar = discord.Embed(title="Help Requested:", color=color)
         embedVar.add_field(name='Name', value=f'{message.author.mention}', inline=False)
         embedVar.add_field(name='Team', value=f'{message.channel.mention}', inline=False)
-        # help description without '!help'
-        help_desc = f'{message.content}'[5:]
         # the help description is now hyperlinked
         embedVar.add_field(name='Description', value=f'[{help_desc}]({message.jump_url})', inline=False)
         await help_chan.send(embed=embedVar)
@@ -285,27 +292,22 @@ async def on_message(message):
         await message.reply(f'hey {message.author.mention}! Your discord id is {message.author}')
 
     elif 'rickroll' in message.content:
-        logging.info(f'{message.author} got rick rolled lmao')
-        await bot_chan.send(f'{message.author} got rick rolled lmao')
+        logging.info(f'{message.author.name} got rick rolled lmao')
+        await bot_chan.send(f'{message.author.mention} got rick rolled lmao')
         await message.channel.send('Here ya go! <https://www.youtube.com/watch?v=xn38dg0YrzY>')
 
     elif message_array[0] == "!setupServer":
         # doing a role check
 
         temp = [s for s in guild.roles if user_role_name == s.name]
-        if (len(temp) > 0):
-            user_role = temp[0]
-        else:
-            user_role = await guild.create_role(name=user_role_name)
+        user_role = temp[0] if (len(temp) > 0) else await guild.create_role(name=user_role_name)
 
         temp = [s for s in guild.roles if mod_role_name == s.name]
-        if (len(temp) > 0):
-            mod_role = temp[0]
-        else:
-            mod_role = await guild.create_role(name=mod_role_name)
+        mod_role = temp[0] if (len(temp) > 0) else await guild.create_role(name=mod_role_name)
 
-        # that means the server has no other roles other than default, user, & admin.  So make this user a mod
-        if len(guild.roles) < 3:
+        # The server has no other roles other than default, user, admin, and the role for this bot.
+        # So make this user a mod.
+        if len(guild.roles) < 4:
             message.author.add_roles(mod_role)
 
         if (not mod_check):
@@ -376,8 +378,8 @@ async def on_message(message):
                 publicCat = [s for s in guild.categories if "public area" == s.name][0]
 
             if (message.channel.category != publicCat):
-                    logging.info('moving bot stuff to public area category')
-                    await message.channel.edit(category=publicCat)
+                logging.info('moving bot stuff to public area category')
+                await message.channel.edit(category=publicCat)
 
             if announce_chan_name not in [j.name for j in guild.text_channels]:
                 logging.info('created #announcements')
@@ -421,9 +423,9 @@ async def on_message(message):
                     })
                     await botChan.send(f'Created the {public_chan.mention} visible to all')
 
-            if "team channels" not in [j.name for j in guild.categories]:
+            if team_category_name not in [j.name for j in guild.categories]:
                 logging.info('creating team category')
-                await guild.create_category("team channels", overwrites={
+                await guild.create_category(team_category_name, overwrites={
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True)
                 })
