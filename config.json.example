@@ -6,6 +6,7 @@
   "channels_to_keep": "general, setup",
   "public_channels": "looking-for-teammate",
   "admin_channels": "control-room",
+  "team_category": "team channels",
   "mod_role": "gamecontrol",
   "user_role": "puzzler",
   "ToS_channel": "please-accept-terms",
