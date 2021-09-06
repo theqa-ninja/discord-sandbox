@@ -318,6 +318,13 @@ async def on_message(message):
         mod_role = temp[0] if (len(temp) > 0) else await guild.create_role(name=mod_role_name)
         await user_role.edit(mentionable=False)
 
+        # the bot is missing permissions even with admin and manage roles
+        # in order to fix this, the bot role must be above the default admin role, to edit the admin role.
+        temp = [s for s in guild.roles if 'admin' == s.name]
+        if (len(temp) > 0):
+            admin_role = temp[0]
+            await admin_role.edit(mentionable=False)
+
         # The server has no other roles other than default, user, admin, and the role for this bot.
         # So make this user a mod.
         if len(guild.roles) < 4:
