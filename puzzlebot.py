@@ -11,11 +11,10 @@ fileConfig('logging.ini')
 
 
 def isMod(author_member):
-    author_roles = author_member.roles
-    if len([s for s in author_roles if mod_role_name == s.name]) > 0:
-        return True
-    else:
-        return False
+    if author_member.get("roles") is not None:
+        if len([s for s in author_member.roles if mod_role_name == s.name]) > 0:
+            return True
+    return False
 
 
 try:
