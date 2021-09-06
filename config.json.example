@@ -1,14 +1,14 @@
 {
-  "bottoken": "YOUR TOKEN HERE",
+  "bottoken": "<ADD YOUR BOT TOKEN HERE>",
   "help_channel": "help-please",
   "announcements": "announcements",
   "bot_spam": "botcommands",
-  "channels_to_keep": "general, setup",
-  "public_channels": "looking-for-teammate",
-  "admin_channels": "control-room",
-  "team_category": "team channels",
+  "channels_to_keep": "general",
+  "public_channels": "looking-for-teammate, general",
+  "admin_channels": "control-room, botcommands, help-please, recent-answers",
   "mod_role": "gamecontrol",
+  "team_category": "team channels",
   "user_role": "puzzler",
   "ToS_channel": "please-accept-terms",
-  "ToS_acceptance_emoji": ""
+  "ToS_acceptance_emoji": "cookie",
 }
