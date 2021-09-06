@@ -281,13 +281,49 @@ async def on_message(message):
         await message.channel.send('Here ya go! <https://www.youtube.com/watch?v=xn38dg0YrzY>')
 
     elif message_array[0] == "!setupServer":
-        # doing a role check
+        # disabling perms from the default role
+        default_perms = guild.default_role.permissions
+        default_perms.update(add_reactions=False,
+                             attach_files=False,
+                             connect=False,
+                             embed_links=False,
+                             mention_everyone=False,
+                             send_tts_messages=False,
+                             use_slash_commands=False)
+        await guild.default_role.edit(permissions=default_perms, mentionable=False)
 
+        # doing a role check
         temp = [s for s in guild.roles if user_role_name == s.name]
         user_role = temp[0] if (len(temp) > 0) else await guild.create_role(name=user_role_name)
+        # limiting user_role permissions
+        user_role.permissions.value = 0
+        user_perms = user_role.permissions
+        user_perms.update(add_reactions=True,
+                          attach_files=True,
+                          change_nickname=True,
+                          connect=True,
+                          create_instant_invite=True,
+                          embed_links=True,
+                          external_emojis=True,
+                          read_message_history=True,
+                          read_messages=True,
+                          send_messages=True,
+                          speak=True,
+                          stream=True,
+                          use_slash_commands=True,
+                          use_voice_activation=True)
+        await user_role.edit(permissions=user_perms, mentionable=False)
 
         temp = [s for s in guild.roles if mod_role_name == s.name]
         mod_role = temp[0] if (len(temp) > 0) else await guild.create_role(name=mod_role_name)
+        await user_role.edit(mentionable=False)
+
+        # the bot is missing permissions even with admin and manage roles
+        # in order to fix this, the bot role must be above the default admin role, to edit the admin role.
+        temp = [s for s in guild.roles if 'admin' == s.name]
+        if (len(temp) > 0):
+            admin_role = temp[0]
+            await admin_role.edit(mentionable=False)
 
         # The server has no other roles other than default, user, admin, and the role for this bot.
         # So make this user a mod.
