@@ -13,9 +13,8 @@ fileConfig('logging.ini')
 
 
 def modcheck(author_member):
-    if author_member.get("roles") is not None:
-        if len([s for s in author_member.roles if mod_role_name == s.name]) > 0:
-            return True
+    if len([s for s in author_member.roles if mod_role_name == s.name]) > 0:
+        return True
     return False
 
 
@@ -253,9 +252,6 @@ async def on_message(message):
         # doesn't exist so let's create it
         mod_role = [s for s in guild.roles if mod_role_name == s.name][0]
         team_cat = [s for s in guild.categories if "team channels" == s.name][0]
-        add_msg = f'Created new text channel {new_chan_name}'
-        logging.info(add_msg)
-        await bot_chan.send(add_msg)
         new_chan = await guild.create_text_channel(new_chan_name, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
@@ -265,8 +261,7 @@ async def on_message(message):
             topic=f'Private Channel for team {new_chan_name}.  If you talk about puzzles here, it is easier for GameControl to figure out what you have tried when you ask for help',
             category=team_cat)
         await message.reply(f'Created new text channel {new_chan.mention}')
-        logging.info(add_msg)
-        await bot_chan.send(add_msg)
+        logging.info(f'Created new text channel {new_chan_name}')
         new_chan = await guild.create_voice_channel(new_chan_name, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
@@ -275,6 +270,7 @@ async def on_message(message):
                 },
             category=team_cat)
         await message.reply(f'Created new voice channel {new_chan.mention}')
+        await bot_chan.send(f'Created new team channels for Team: {new_chan_name}')
 
     elif message_array[0] == '!author':
         await message.reply(f'hey {message.author.mention}! Your discord id is {message.author}')
