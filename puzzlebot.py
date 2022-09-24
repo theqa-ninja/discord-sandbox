@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import requests
 from logging.config import fileConfig
 
 
@@ -227,7 +228,7 @@ async def on_message(message):
                 await chan.edit(overwrites={add_user: discord.PermissionOverwrite(read_messages=True, send_messages=True)})
 
     # Creates new teams
-    elif message_array[0] == '!createTeam':
+    elif message_array[0] == '!createTeam' || message_array[0] == '!createTeamV2':
         if (not mod_check):
             logging.warning(f'!createTeam called by {message.author.name}, who is not a mod')
             await bot_chan.send(f'!createTeam called by {message.author.mention}, who is not a mod')
@@ -242,7 +243,13 @@ async def on_message(message):
             await bot_chan.send('!createTeam called with incorrect parameters')
             await message.reply(f'This command needs {input_count} parameters')
             return
-        new_chan_name = ' '.join(message_array[1:])
+
+        if message_array[0] == '!createTeam'
+            new_chan_name = ' '.join(message_array[1:])
+        else
+            team_id = message_array[1]
+            new_chan_name = ' '.join(message_array[2:])
+
         # pdb.set_trace()
         if new_chan_name in [j.name for j in guild.channels]:
             logging.warning(f'!createTeam called for existing team "{new_chan_name}"')
@@ -252,7 +259,7 @@ async def on_message(message):
         # doesn't exist so let's create it
         mod_role = [s for s in guild.roles if mod_role_name == s.name][0]
         team_cat = [s for s in guild.categories if "team channels" == s.name][0]
-        new_chan = await guild.create_text_channel(new_chan_name, overwrites={
+        new_text_chan = await guild.create_text_channel(new_chan_name, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
                 mod_role: discord.PermissionOverwrite(read_messages=True),
@@ -260,17 +267,21 @@ async def on_message(message):
                 },
             topic=f'Private Channel for team {new_chan_name}.  If you talk about puzzles here, it is easier for GameControl to figure out what you have tried when you ask for help',
             category=team_cat)
-        await message.reply(f'Created new text channel {new_chan.mention}')
+        await message.reply(f'Created new text channel {new_text_chan.mention}')
         logging.info(f'Created new text channel {new_chan_name}')
-        new_chan = await guild.create_voice_channel(new_chan_name, overwrites={
+        new_voice_chan = await guild.create_voice_channel(new_chan_name, overwrites={
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True),
                 mod_role: discord.PermissionOverwrite(read_messages=True),
                 message.author: discord.PermissionOverwrite(read_messages=True)
                 },
             category=team_cat)
-        await message.reply(f'Created new voice channel {new_chan.mention}')
+        await message.reply(f'Created new voice channel {new_voice_chan.mention}')
         await bot_chan.send(f'Created new team channels for Team: {new_chan_name}')
+
+        if message_array[0] == '!createTeamV2'
+            requests.post('https://puzzlebang.com/update_team_discord_channel', data={'team_id': team_id, 'channel_id': new_text_chan.id})
+
 
     elif message_array[0] == '!author':
         await message.reply(f'hey {message.author.mention}! Your discord id is {message.author}')
